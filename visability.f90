@@ -43,10 +43,10 @@ program visability
   integer, parameter :: dl= KIND(1.d0)
 
   !experiment:
-  real(dl), parameter :: WidthCyl = 15.d0 !m
-  real(dl), parameter :: LengthCyl = 120.d0 !m
+  real(dl), parameter :: WidthCyl = 20.d0 !m
+  real(dl), parameter :: LengthCyl = 100.d0 !m
   integer, parameter :: Nantenna = 256 !# of antenna p cylinder
-  integer, parameter :: Ncyl = 8
+  integer, parameter :: Ncyl = 4
   real(dl), parameter :: years = 1
   real(dl), parameter :: fsky = 0.3
   real(dl) :: zmin  = 0.2
@@ -165,9 +165,9 @@ program visability
         
         do i = 1, nbase
            !I now picked the res along the cylinder to be one wavelnegth. Can change this.
-           res = Lambda((uL-UniquePairs(i,1))/(0.21))* &
+           res = Lambda((uL-UniquePairs(i,1))/(1.d0*l21))* &
                 Lambda((uW-UniquePairs(i,2))/DeltauW) + &
-                Lambda((uL+UniquePairs(i,1))/(0.21))* &
+                Lambda((uL+UniquePairs(i,1))/(1.d0*l21))* &
                 Lambda((uW+UniquePairs(i,2))/DeltauW) 
 
            sumX = sumX + res
@@ -189,7 +189,7 @@ program visability
   write(*,*) "normalization:", norm
 
   !normalize visabilty function and store in file
-  open(unit=21,file = 'Nu_Exp1.dat', status='replace')
+  open(unit=21,file = 'Nu_CHIME.dat', status='replace')
 
   do l = 1, Wsteps
      uW = uW0 + (l-1)*Uwstep
@@ -232,7 +232,7 @@ program visability
      mulist(i) = -1.d0+ 2.d0/(Nmu-1)*(i-1)
   enddo
   
-  open(unit=21,file = 'Noise_Exp2.dat', status='replace')
+  open(unit=21,file = 'Noise_CHIME.dat', status='replace')
 
   !This loop converts from W-L (or U-V) plane to k-lambda by taking shells in 3D and
   !projecting them on the 2D surface. This is done by suming over angles and deviding by the number of samples.
@@ -252,7 +252,7 @@ program visability
              
               !outside this range, we know the visability is 0. Interpolation will give out of bounds.
               !there is also no zero mode
-              if (abs(uW) > abs(uW0)-1 .or. abs(uL) > abs(uL0)-1 .or. abs(uL) .eq. 0.d0 .or. abs(uW) .eq. 0d0) then
+              if (abs(uW) > abs(uW0)-1 .or. abs(uL) > abs(uL0)-1 .or. (abs(uL) .eq. 0.d0 .and. abs(uW) .eq. 0d0)) then
                  y = 0.d0
               else                
                  call Simple2DLinInterp(uW,uL,uW0,uL0,uWstep,uLstep,VisFunction,y)
@@ -314,10 +314,10 @@ contains
 
     !determine the box, given x and y
 
-    s1m=floor((x-xmin)/dx)
-    s1p = s1m+1
-    s2m=floor((y-ymin)/dy)    
-    s2p = s2m+1
+    s1m=floor((x-xmin)/dx)+1
+    s1p = s1m+2
+    s2m=floor((y-ymin)/dy)+1   
+    s2p = s2m+2
 
     !How does it work. Very simple:
     ! (s1m,s2p)       (s1p,s2p)      
