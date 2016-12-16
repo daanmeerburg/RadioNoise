@@ -11,7 +11,7 @@
 !unique baselines and this has been openmp parallized. The larger the number
 !of antenna, the longer this computation takes depending on how well you want
 !to sample the visability function. Current settings are a little overkill
-!and the computation takes about 20 minutes on 16 cores.
+!and the computation takes about 4 minutes on 16 cores.
 !!!!!!!!!!!
 !the senseitivity along the length of the cylinder (L) is now assumed to
 !be reflection with a dish set by the length of the cylinder devided
@@ -22,10 +22,17 @@
 !since, if the # of anteanna is not closely packed, will lead to 'blind' spots
 !in the array. If you plot the visablity function, you will see little holes in it.
 !This ofcourse will result in a more bumpy noise curve. I found though that when you average
-!(which is what I do anyways) this is not a big effect.
+!(which is what I do anyways) this is not a big effect. Currently, I actually
+!did set it to 21cm (see below). 
 !!!!!!!!!!
 !For the experiment you also have to specify the resolition in k-space and in redshift space.
 !Anyways, modification should be relativily straightforward
+!!!!!!!!!
+!output of the code:
+!----normalized visability function in the U_perp plane (or U-V plane)
+!----Noise matrix in redshift-k space in mK^2 Mpc^3.
+!Only use the noise for spectra with the SAME res
+!settings. Otherwise you will be undercountin/overcounting information. 
 
 
 program visability
@@ -262,7 +269,7 @@ program visability
         Nkz = fsky*k**2*dk* &
              (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
              DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
-        write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
+        !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
         !write k [1/Mpc], lambda, P_N [Mpc^3]
         write(21,"(E16.7,2X,E16.7,2X,F16.7)") k, llist(j), &
              IntensityNoise(llist(j)/l21-1,(shellmu/Nmu/Nphi),secyears)/sqrt(Nkz)
