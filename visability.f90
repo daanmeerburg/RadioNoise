@@ -51,7 +51,7 @@ program visability
   real(dl), parameter :: fsky = 0.3
   real(dl) :: zmin  = 0.2
 
-  
+
   !cosmology:
   real(dl), parameter :: Omegam = 0.28
   real(dl), parameter :: h0 = 0.68
@@ -76,7 +76,7 @@ program visability
   real(dl), allocatable :: mulist(:)
   real(dl), allocatable :: philist(:)
 
-  
+
   real(dl), allocatable :: UniquePairs(:,:)
   real(dl), allocatable :: MyGrid(:,:)
   real(dl), allocatable :: VisFunction(:,:)
@@ -93,9 +93,12 @@ program visability
   real(dl) :: shellphi, shellmu
 
 
- 
+
   real(dl) :: secyears
   real(dl) :: Nkz
+
+  !2d vs 1D (2D needed for H/D_A constraints)
+  logical :: want2D = .True. 
 
 
   Ndetect = Nantenna*Ncyl
@@ -123,10 +126,10 @@ program visability
         s = s + 1
      enddo
   enddo
-  
+
   !check that the number of unique pairs is computed correctly
   if(s-1 .ne. nbase) print*, "number of baselines not computes correctly"
-  
+
   !time to deallocate
   deallocate(MyGrid)
 
@@ -136,10 +139,10 @@ program visability
   !symmetry works better:
   uW0 = -LengthCyl
   uL0 = -LengthCyl
-  
+
   uLstep = 1.d0
   uWstep = 1.d0
-  
+
   Wsteps = int(2*abs(uW0)/uLstep)+1
   Lsteps = int(2*abs(uL0)/uWstep)+1 
 
@@ -162,7 +165,7 @@ program visability
 
         sumX = 0.d0
         res = 0.d0
-        
+
         do i = 1, nbase
            !I now picked the res along the cylinder to be one wavelnegth. Can change this.
            res = Lambda((uL-UniquePairs(i,1))/(1.d0*l21))* &
@@ -183,7 +186,7 @@ program visability
      write(*,*) Uw
 
   enddo
- 
+
 
   !$OMP END PARALLEL DO
   write(*,*) "normalization:", norm
@@ -199,9 +202,9 @@ program visability
         uL = uL + uLstep
      enddo
   enddo
-  
+
   close(21)
-  
+
   !time to deallocate
   deallocate(UniquePairs)
 
@@ -217,7 +220,7 @@ program visability
   secyears = years*24.*60.*60.*365. !in sec
 
   zmax = zmin +  dz*(Nlambda-1)
-  
+
   do i = 1, Nk
      !kloglist(i) = 10**(-2+(i-1)*0.004) !in Mpc^-1
      klinlist(i) = dk+dk*(i-1)*2
@@ -231,52 +234,99 @@ program visability
   do i = 1, Nmu
      mulist(i) = -1.d0+ 2.d0/(Nmu-1)*(i-1)
   enddo
-  
-  open(unit=21,file = 'Noise_CHIME.dat', status='replace')
+
 
   !This loop converts from W-L (or U-V) plane to k-lambda by taking shells in 3D and
   !projecting them on the 2D surface. This is done by suming over angles and deviding by the number of samples.
-  
-  do i = 1, Nk
-     !here you can choose if you want log or lin sampling in k 
-     k = klinlist(i)
-     do j = 1, Nlambda
-        shellmu = 0.d0
-        !averaging over phi/mu:
-        do t = 1, Nmu
-           shellphi = 0.d0
-           do l = 1, Nphi
 
-              uL = k*sqrt(1-mulist(t)**2)*Cos(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
-              uW = k*sqrt(1-mulist(t)**2)*Sin(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
-             
-              !outside this range, we know the visability is 0. Interpolation will give out of bounds.
-              !there is also no zero mode
-              if (abs(uW) > abs(uW0)-1 .or. abs(uL) > abs(uL0)-1 .or. (abs(uL) .eq. 0.d0 .and. abs(uW) .eq. 0d0)) then
-                 y = 0.d0
-              else                
-                 call Simple2DLinInterp(uW,uL,uW0,uL0,uWstep,uLstep,VisFunction,y)
-              endif
-              !write(*,*) k, uL, uW, y
-              !add shell:
-              shellphi = shellphi + nbase*y/norm
+  if (want2D) then
+     open(unit=21,file = 'Noise_CHIME_2D.dat', status='replace')
+     do i = 1, Nk
 
+        !here you can choose if you want log or lin sampling in k 
+        k = klinlist(i)
+        do j = 1, Nlambda
+           shellmu = 0.d0
+           !averaging over phi/mu:
+           do t = 1, Nmu
+              shellphi = 0.d0
+              do l = 1, Nphi
+
+                 uL = k*sqrt(1-mulist(t)**2)*Cos(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
+                 uW = k*sqrt(1-mulist(t)**2)*Sin(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
+
+                 !outside this range, we know the visability is 0. Interpolation will give out of bounds.
+                 !there is also no zero mode
+                 if (abs(uW) > abs(uW0)-1 .or. abs(uL) > abs(uL0)-1 .or. (abs(uL) .eq. 0.d0 .and. abs(uW) .eq. 0d0)) then
+                    y = 0.d0
+                 else                
+                    call Simple2DLinInterp(uW,uL,uW0,uL0,uWstep,uLstep,VisFunction,y)
+                 endif
+                 !write(*,*) k, uL, uW, y
+                 !add shell:
+                 shellphi = shellphi + nbase*y/norm
+
+              enddo !philoop
+              !compute the # of modes in this shell:
+              Nkz = fsky*k**2*dk* &
+                   (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
+                   DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
+              !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
+              !write k [1/Mpc], lambda, P_N [Mpc^3]
+              write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,F16.7)") k, mulist(i), llist(j), &
+                   IntensityNoise(llist(j)/l21-1,(shellphi/Nphi),secyears)/sqrt(Nkz)
+              !shellmu/Nmu/Nphi
+           enddo !muloop
+
+        enddo !lambdaloop
+     enddo !kloop
+     close(21)
+  else
+     open(unit=21,file = 'Noise_CHIME_1D.dat', status='replace')
+
+     do i = 1, Nk
+
+        !here you can choose if you want log or lin sampling in k 
+        k = klinlist(i)
+        do j = 1, Nlambda
+           shellmu = 0.d0
+           !averaging over phi/mu:
+           do t = 1, Nmu
+              shellphi = 0.d0
+              do l = 1, Nphi
+
+                 uL = k*sqrt(1-mulist(t)**2)*Cos(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
+                 uW = k*sqrt(1-mulist(t)**2)*Sin(philist(l))*llist(j)/(2.d0*pi)* DCapprox(llist(j)/L21-1.,Omegam,h0)
+
+                 !outside this range, we know the visability is 0. Interpolation will give out of bounds.
+                 !there is also no zero mode
+                 if (abs(uW) > abs(uW0)-1 .or. abs(uL) > abs(uL0)-1 .or. (abs(uL) .eq. 0.d0 .and. abs(uW) .eq. 0d0)) then
+                    y = 0.d0
+                 else                
+                    call Simple2DLinInterp(uW,uL,uW0,uL0,uWstep,uLstep,VisFunction,y)
+                 endif
+                 !write(*,*) k, uL, uW, y
+                 !add shell:
+                 shellphi = shellphi + nbase*y/norm
+
+              enddo
+
+              shellmu = shellmu + shellphi
            enddo
-
-           shellmu = shellmu + shellphi
+           !compute the # of modes in this shell:
+           Nkz = fsky*k**2*dk* &
+                (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
+                DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
+           !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
+           !write k [1/Mpc], lambda, P_N [Mpc^3]
+           write(21,"(E16.7,2X,E16.7,2X,F16.7)") k, llist(j), &
+                IntensityNoise(llist(j)/l21-1,(shellmu/Nmu/Nphi),secyears)/sqrt(Nkz)
+           !shellmu/Nmu/Nphi
         enddo
-        !compute the # of modes in this shell:
-        Nkz = fsky*k**2*dk* &
-             (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
-             DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
-        !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
-        !write k [1/Mpc], lambda, P_N [Mpc^3]
-        write(21,"(E16.7,2X,E16.7,2X,F16.7)") k, llist(j), &
-             IntensityNoise(llist(j)/l21-1,(shellmu/Nmu/Nphi),secyears)/sqrt(Nkz)
-             !shellmu/Nmu/Nphi
      enddo
-  enddo
-  close(21)
+     close(21)
+  endif
+
 
   !deallocate what is left:
   deallocate(VisFunction)
@@ -379,7 +429,7 @@ contains
     !talked to Xin, not clear why there is no l^2/Aeff here 
     IntensityNoise =2*4.d0*pi*ra**2*yz*fsky*Tsys**2*(l21**2*(z+1)**2) &
          /Aeff/OmegaFOV/int_time/visab
-         !in Mpc^3
+    !in Mpc^3
   end function IntensityNoise
-  
+
 end program visability
