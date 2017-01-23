@@ -96,6 +96,7 @@ program visability
 
   real(dl) :: secyears
   real(dl) :: Nkz
+  real(dl) :: InstrumentalNoise
 
   !2d vs 1D (2D needed for H/D_A constraints)
   logical :: want2D = .True. 
@@ -273,8 +274,11 @@ program visability
                    DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
               !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
               !write k [1/Mpc], lambda, P_N [Mpc^3]
-              write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,F16.7)") k, mulist(i), llist(j), &
-                   IntensityNoise(llist(j)/l21-1,(shellphi/Nphi),secyears)/sqrt(Nkz)
+              InstrumentalNoise = IntensityNoise(llist(j)/l21-1,(shellphi/Nphi),secyears)/sqrt(Nkz)
+              !make sure there are no infinities:
+              if (InstrumentalNoise .ge. 1.E10) InstrumentalNoise = 1.E10
+              write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7)") k, mulist(i), llist(j), &
+                   InstrumentalNoise
               !shellmu/Nmu/Nphi
            enddo !muloop
 
