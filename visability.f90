@@ -49,7 +49,7 @@ program visability
   integer, parameter :: Ncyl = 4
   real(dl), parameter :: years = 1
   real(dl), parameter :: fsky = 0.3
-  real(dl) :: zmin  = 0.2
+  real(dl) :: zmin  = 0.7
 
 
   !cosmology:
@@ -60,19 +60,19 @@ program visability
   real(dl), parameter :: l21 = 0.21d0 ! meters
   real(dl), parameter :: pi = 3.14159265359
   real(dl) :: dk = 0.005/h0 !in Mpc^-1
-  real(dl) :: dz = 0.2d0
+  real(dl) :: dz = 0.5d0
 
   real(dl) :: kmax, zmax  
   integer :: nbase
 
   !some arrays:
-  integer :: Nk = 500
+  integer :: Nk = 100
   real(dl), allocatable :: kloglist(:)
   real(dl), allocatable :: klinlist(:)
-  integer :: NLambda = 20
+  integer :: NLambda = 5
   real(dl), allocatable :: llist(:)
   integer :: Nphi = 200
-  integer :: Nmu  = 200
+  integer :: Nmu  = 100
   real(dl), allocatable :: mulist(:)
   real(dl), allocatable :: philist(:)
 
@@ -129,7 +129,7 @@ program visability
   enddo
 
   !check that the number of unique pairs is computed correctly
-  if(s-1 .ne. nbase) print*, "number of baselines not computes correctly"
+  if(s-1 .ne. nbase) print*, "number of baselines not computed correctly"
 
   !time to deallocate
   deallocate(MyGrid)
@@ -193,7 +193,7 @@ program visability
   write(*,*) "normalization:", norm
 
   !normalize visabilty function and store in file
-  open(unit=21,file = 'Nu_CHIME.dat', status='replace')
+  open(unit=21,file = 'nu_CHIMElikeExp.dat', status='replace')
 
   do l = 1, Wsteps
      uW = uW0 + (l-1)*Uwstep
@@ -217,7 +217,7 @@ program visability
   allocate(mulist(Nmu))
   !convert U-V to k-lambda:
 
-  zmin = 0.2d0 !also specified above: overwrite
+  zmin = 0.7d0 !also specified above: overwrite
   secyears = years*24.*60.*60.*365. !in sec
 
   zmax = zmin +  dz*(Nlambda-1)
@@ -242,14 +242,13 @@ program visability
 
   if (want2D) then
      open(unit=21,file = 'Noise_CHIME_2D.dat', status='replace')
-     do i = 1, Nk
-
-        !here you can choose if you want log or lin sampling in k 
-        k = klinlist(i)
-        do j = 1, Nlambda
+     do j = 1, Nlambda
+        do i = 1, Nk
+           !here you can choose if you want log or lin sampling in k
+           k = klinlist(i)
            shellmu = 0.d0
            !averaging over phi/mu:
-           do t = 1, Nmu
+           do t = 1, Nmu 
               shellphi = 0.d0
               do l = 1, Nphi
 
@@ -274,16 +273,19 @@ program visability
                    DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
               !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
               !write k [1/Mpc], lambda, P_N [Mpc^3]
+              if (shellphi < 0) shellphi = 0.d0
               InstrumentalNoise = IntensityNoise(llist(j)/l21-1,(shellphi/Nphi),secyears)/sqrt(Nkz)
               !make sure there are no infinities:
               if (InstrumentalNoise .ge. 1.E10) InstrumentalNoise = 1.E10
-              write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7)") k, mulist(i), llist(j), &
+              write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7)") llist(j), k, mulist(t),  &
+                   InstrumentalNoise
+              write(*,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7, 2X, E16.7)") llist(j), k, mulist(t), shellphi/Nphi,  &
                    InstrumentalNoise
               !shellmu/Nmu/Nphi
            enddo !muloop
 
-        enddo !lambdaloop
-     enddo !kloop
+        enddo !kloop
+     enddo !lambdaloop
      close(21)
   else
      open(unit=21,file = 'Noise_CHIME_1D.dat', status='replace')
