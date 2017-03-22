@@ -99,6 +99,10 @@ program visability
   real(dl) :: InstrumentalNoise
 
   !2d vs 1D (2D needed for H/D_A constraints)
+  !if set to false, the code produces a file the has P(k,lambda)
+  !this is useful for simple forecasts of the power spectrum (you can compare your P(k,z) to this one)
+  !if set to true code produces an unintegrated P(k,mu,lambda)
+  !this is useful if you would like to do Fisher forecast which rely on volume and integrate over mu (or kperp and kpar)
   logical :: want2D = .True. 
 
 
@@ -272,15 +276,15 @@ program visability
                    (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
                    DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
               !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
-              !write k [1/Mpc], lambda, P_N [Mpc^3]
+              !write k [1/Mpc], lambda, P_N [Mpc^3] mK^2
               if (shellphi < 0) shellphi = 0.d0
               InstrumentalNoise = IntensityNoise(llist(j)/l21-1,(shellphi/Nphi),secyears)/sqrt(Nkz)
               !make sure there are no infinities:
               if (InstrumentalNoise .ge. 1.E10) InstrumentalNoise = 1.E10
               write(21,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7)") llist(j), k, mulist(t),  &
                    InstrumentalNoise
-              write(*,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7, 2X, E16.7)") llist(j), k, mulist(t), shellphi/Nphi,  &
-                   InstrumentalNoise
+              !write(*,"(E16.7,2X,E16.7,2X,F16.7,2X,E16.7, 2X, E16.7)") llist(j), k, mulist(t), shellphi/Nphi,  &
+              !     InstrumentalNoise
               !shellmu/Nmu/Nphi
            enddo !muloop
 
@@ -316,7 +320,7 @@ program visability
                  shellphi = shellphi + nbase*y/norm
 
               enddo
-
+              if (shellphi < 0) shellphi = 0.d0
               shellmu = shellmu + shellphi
            enddo
            !compute the # of modes in this shell:
@@ -324,7 +328,7 @@ program visability
                 (DCapprox((llist(j)/l21 + dz/2.d0-1),OmegaM,h0)**3 - &
                 DCapprox((llist(j)/l21 - dz/2.d0-1),OmegaM,h0)**3)*1.d0/2.d0/pi**2
            !write(*,*) k/h0, llist(j),shellmu/Nmu/Nphi, IntensityNoise(llist(j)/l21-1,shellmu/Nmu/Nphi,secyears)/sqrt(Nkz)*h0**3
-           !write k [1/Mpc], lambda, P_N [Mpc^3]
+           !write k [1/Mpc], lambda, P_N [Mpc^3] mK^2
            write(21,"(E16.7,2X,E16.7,2X,F16.7)") k, llist(j), &
                 IntensityNoise(llist(j)/l21-1,(shellmu/Nmu/Nphi),secyears)/sqrt(Nkz)
            !shellmu/Nmu/Nphi
