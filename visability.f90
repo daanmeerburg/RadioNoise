@@ -421,7 +421,7 @@ contains
     Hubble = 100*h0*sqrt(OmegaM*(z+1)**3 + 1 - OmegaM) !in km/Mpc/s
   end function Hubble
 
-  !covert visability function to noise curve. 
+  !convert visability function to noise curve. 
   real(dl) function IntensityNoise(z,visab,int_time)
     real(dl), intent(in) :: visab
     real(dl), intent(in) :: z
@@ -439,7 +439,7 @@ contains
     !talked to Xin, not clear why there is no l^2/Aeff here 
     IntensityNoise =2*4.d0*pi*ra**2*yz*fsky*Tsys**2*(l21**2*(z+1)**2) &
          /Aeff/OmegaFOV/int_time/visab
-    !in Mpc^3
+    !in Mpc^3 mK^2
   end function IntensityNoise
 
 end program visability
