@@ -99,9 +99,9 @@ program visability
   real(dl) :: InstrumentalNoise
 
   !2d vs 1D (2D needed for H/D_A constraints)
-  !if set to false, the code produces a file the has P(k,lambda)
-  !this is useful for simple forecasts of the power spectrum (you can compare your P(k,z) to this one)
-  !if set to true code produces an unintegrated P(k,mu,lambda)
+  !if set to false, the code produces a file the has P_N(k,lambda)
+  !this is useful for simple forecasts of the power spectrum (you can compare your P_21(k,z) to this one)
+  !if set to true code produces an unintegrated P_N(k,mu,lambda)
   !this is useful if you would like to do Fisher forecast which rely on volume and integrate over mu (or kperp and kpar)
   logical :: want2D = .True. 
 
